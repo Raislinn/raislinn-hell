@@ -26,14 +26,14 @@ export default function StatusBar() {
   return (
     <footer className="statusbar">
       <span>
-        MEM <b>64%</b> · FX.SYS · PHOSPHOR <b>CAL</b>
+        CAM <b>00</b> · REC · SIGNAL <b>STABLE</b>
       </span>
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <Link href="/academy" className="hover:text-[var(--phosphor)]">
           ACADEMY.OFF
         </Link>
         <span>
-          v1.0.0 · {clock} · <b>NO SIGNAL LEAK</b>
+          SEC-OS v1.1 · {clock} · <b>DESK LOCKED</b>
         </span>
       </span>
     </footer>

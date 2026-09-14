@@ -1,5 +1,5 @@
 export const NAV = [
-  { href: "/", label: "ROOT", file: "BOOT.SYS" },
+  { href: "/", label: "ROOT", file: "CAM00.SYS" },
   { href: "/work", label: "WORK", file: "WORK.DIR" },
   { href: "/services", label: "SERVICES", file: "SVC.DIR" },
   { href: "/about", label: "ABOUT", file: "MYTHOS.TXT" },
@@ -12,5 +12,5 @@ export const BRAND = {
   sub: "Horror FX · Prosthetics · Creature · On-set bloodwork",
   email: "studio@raislinnhell.com",
   domain: "raislinnhell.com",
-  path: "C:\\ENTITY\\ARCHIVE\\FX",
+  path: "SEC:\\ARCHIVE\\FX",
 } as const;

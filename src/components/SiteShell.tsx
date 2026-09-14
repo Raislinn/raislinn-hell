@@ -22,10 +22,10 @@ export default function SiteShell({
         <header className="titlebar">
           <div>
             <span className="online-dot" />
-            {BRAND.name.toUpperCase()}{" // ARCHIVE TERMINAL"}
+            {BRAND.name.toUpperCase()}{" // SEC-OS"}
           </div>
-          <div className="mid">{file ?? "BOOT.SYS"}</div>
-          <div className="right phosphor">SYSTEM ONLINE</div>
+          <div className="mid">{file ?? "CAM00.SYS"}</div>
+          <div className="right phosphor">MONITOR ONLINE</div>
         </header>
         <TerminalNav />
         <div className="bezel-body">{children}</div>

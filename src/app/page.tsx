@@ -3,7 +3,7 @@ import SiteShell from "@/components/SiteShell";
 
 export default function Home() {
   return (
-    <SiteShell file="BOOT.SYS">
+    <SiteShell file="CAM00.SYS">
       <HomeExperience />
     </SiteShell>
   );

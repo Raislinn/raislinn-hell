@@ -18,10 +18,10 @@ export default function HomeExperience() {
   return (
     <>
       {!open ? <BootSequence onEnter={onEnter} /> : null}
-      <section className="hero-stage">
+      <section className={`hero-stage ${open ? "hero-stage--live" : "hero-stage--sealed"}`}>
         <ShaderCanvas />
         <div className="hero-copy">
-          <p className="kicker phosphor">Horror FX studio · Archive node</p>
+          <p className="kicker phosphor">Horror FX studio · Security node</p>
           <GlitchWordmark />
           <p className="tagline">Practical nightmares for camera.</p>
           <p className="subline">Horror FX · Prosthetics · Creature · On-set bloodwork</p>
@@ -35,8 +35,8 @@ export default function HomeExperience() {
           </div>
         </div>
         <div className="hero-meta">
-          <span>Move the pointer · Shader live</span>
-          <span>Enter without mercy</span>
+          <span>Pointer tracks · Shader live</span>
+          <span>Cam 00 · Archive interior</span>
         </div>
       </section>
     </>

@@ -94,7 +94,7 @@ export default function BootSequence({ onEnter }: { onEnter: () => void }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             className="desk-photo"
-            src="/security-desk.jpg"
+            src="/security-desk.png"
             alt="Photoreal security office desk with CRT monitors"
             draggable={false}
           />

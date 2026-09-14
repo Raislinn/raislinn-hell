@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /academy/
+
+Sitemap: https://raislinnhell.com/sitemap.xml

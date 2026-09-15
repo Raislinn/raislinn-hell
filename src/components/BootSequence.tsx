@@ -28,7 +28,9 @@ export const CRT_CENTER = {
 } as const;
 
 export const ZOOM_MS = 1600;
+export const SETTLE_MS = 180;
 export const REDUCED_MS = 280;
+export const REDUCED_SETTLE_MS = 100;
 
 export type BootPhase = "idle" | "zooming" | "done";
 
@@ -54,7 +56,8 @@ export function measureCrt(vw: number, vh: number): CrtMetrics {
   const height = (CRT.height / 100) * deskH;
 
   const fit = Math.max(width / Math.max(vw, 1), height / Math.max(vh, 1));
-  const zoom = Math.max(vw / Math.max(width, 1), vh / Math.max(height, 1)) * 1.08;
+  // Exact fill — no overshoot. Desk photo uses this; portal morphs box to viewport.
+  const zoom = Math.max(vw / Math.max(width, 1), vh / Math.max(height, 1));
 
   return { left, top, width, height, fit, zoom };
 }
@@ -84,7 +87,7 @@ function clearCrtVars() {
     "--crt-ox",
     "--crt-oy",
   ].forEach((k) => root.style.removeProperty(k));
-  root.classList.remove("rh-crt-ready", "rh-reduced-zoom");
+  root.classList.remove("rh-crt-ready", "rh-reduced-zoom", "rh-settling");
 }
 
 export default function BootSequence({
@@ -120,7 +123,7 @@ export default function BootSequence({
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
-      document.documentElement.classList.remove("rh-booting");
+      document.documentElement.classList.remove("rh-booting", "rh-settling");
       clearCrtVars();
     };
   }, [remeasure, phase]);
@@ -133,10 +136,17 @@ export default function BootSequence({
     } catch {
       /* ignore */
     }
-    document.documentElement.classList.remove("rh-booting");
+    document.documentElement.classList.remove("rh-booting", "rh-settling");
     clearCrtVars();
     onDone();
   }, [onDone]);
+
+  const beginSettle = useCallback(() => {
+    const root = document.documentElement;
+    // Portal is already fullscreen; fade shell chrome in, then hand off.
+    root.classList.add("rh-settling");
+    root.classList.remove("rh-booting");
+  }, []);
 
   const enter = useCallback(() => {
     if (phase !== "idle") return;
@@ -155,10 +165,15 @@ export default function BootSequence({
 
   useEffect(() => {
     if (phase !== "zooming") return;
-    const ms = reduce ? REDUCED_MS : ZOOM_MS;
-    const t = window.setTimeout(() => finish(), ms);
-    return () => window.clearTimeout(t);
-  }, [phase, finish, reduce]);
+    const zoomMs = reduce ? REDUCED_MS : ZOOM_MS;
+    const settleMs = reduce ? REDUCED_SETTLE_MS : SETTLE_MS;
+    const tSettle = window.setTimeout(() => beginSettle(), zoomMs);
+    const tDone = window.setTimeout(() => finish(), zoomMs + settleMs);
+    return () => {
+      window.clearTimeout(tSettle);
+      window.clearTimeout(tDone);
+    };
+  }, [phase, finish, beginSettle, reduce]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

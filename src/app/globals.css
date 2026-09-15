@@ -648,7 +648,7 @@ a {
   transform: scale(1);
   transform-origin: 35.55% 64.85%;
   transition:
-    transform 1.6s cubic-bezier(0.75, 0.02, 0.25, 1),
+    transform 1.6s cubic-bezier(0.22, 1, 0.36, 1),
     filter 1.6s ease;
   will-change: transform;
 }
@@ -672,7 +672,8 @@ a {
 }
 
 .security-desk.is-zooming {
-  animation: desk-fade-out 0.4s ease 1.2s forwards;
+  /* Fully faded when portal settles at fullscreen (1.1 + 0.5 = 1.6s) */
+  animation: desk-fade-out 0.5s cubic-bezier(0.22, 1, 0.36, 1) 1.1s forwards;
 }
 
 @keyframes desk-fade-out {
@@ -838,15 +839,35 @@ a {
   animation: pulse-dot 1.4s ease-in-out infinite;
 }
 
+/* Shell chrome: fade in on soft handoff after CRT zoom */
+.titlebar,
+.nav-row,
+.statusbar,
+.bezel-corners,
+.crt-overlay {
+  transition: opacity 0.2s ease;
+}
+
 /* Hide shell chrome while diving in through the CRT */
 html.rh-booting .titlebar,
-html.rh-booting .terminal-nav,
-html.rh-booting .status-bar,
+html.rh-booting .nav-row,
+html.rh-booting .statusbar,
 html.rh-booting .bezel-corners,
 html.rh-booting .crt-overlay {
   opacity: 0 !important;
   pointer-events: none !important;
   transition: none;
+}
+
+/* After zoom: chrome fades in while portal stays fullscreen */
+html.rh-settling .titlebar,
+html.rh-settling .nav-row,
+html.rh-settling .statusbar,
+html.rh-settling .bezel-corners,
+html.rh-settling .crt-overlay {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.18s ease;
 }
 
 /* ---------- Hero CRT portal (live site inside glass) ---------- */
@@ -870,19 +891,22 @@ html.rh-booting .crt-overlay {
   height: var(--crt-h, 19%);
   overflow: hidden;
   border-radius: 7% / 9%;
-  transform: scale(1);
-  transform-origin: center center;
+  /* Box-morph to viewport — no scale overshoot / off-center framing */
+  transform: none;
   background: #050505;
   box-shadow:
     inset 0 0 24px rgba(0, 0, 0, 0.55),
     0 0 18px rgba(180, 160, 120, 0.12);
   opacity: 0;
   transition:
-    transform 1.6s cubic-bezier(0.75, 0.02, 0.25, 1),
-    border-radius 1.6s cubic-bezier(0.75, 0.02, 0.25, 1),
+    left 1.6s cubic-bezier(0.22, 1, 0.36, 1),
+    top 1.6s cubic-bezier(0.22, 1, 0.36, 1),
+    width 1.6s cubic-bezier(0.22, 1, 0.36, 1),
+    height 1.6s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 1.6s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 1.6s ease,
     opacity 0.2s ease;
-  will-change: transform;
+  will-change: left, top, width, height;
 }
 
 html.rh-crt-ready .hero-stage--crt .hero-stage__portal {
@@ -898,16 +922,23 @@ html.rh-reduced-zoom .hero-stage--crt .hero-stage__portal {
   border-radius: 0 !important;
   box-shadow: none !important;
   opacity: 1 !important;
+  transition: opacity 0.28s ease !important;
 }
 
 html.rh-reduced-zoom .hero-stage--crt .hero-stage__screen {
   transform: translate(-50%, -50%) scale(1) !important;
+  transition: none !important;
 }
 
+/* Exact fullscreen end state — no scale overshoot */
 .hero-stage--crt-zoom .hero-stage__portal {
-  transform: scale(var(--crt-zoom, 7));
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100dvh;
   border-radius: 0;
   box-shadow: none;
+  transform: none;
 }
 
 .hero-stage--crt .hero-stage__screen {
@@ -924,6 +955,13 @@ html.rh-reduced-zoom .hero-stage--crt .hero-stage__screen {
   transform-origin: center center;
   overflow: hidden;
   background: var(--void);
+  transition: transform 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Inner content fills viewport in sync with portal morph */
+.hero-stage--crt-zoom .hero-stage__screen {
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .hero-stage--crt .hero-stage__crt-fx {
@@ -946,7 +984,7 @@ html.rh-reduced-zoom .hero-stage--crt .hero-stage__screen {
     );
   opacity: 0.45;
   mix-blend-mode: multiply;
-  transition: opacity 1.2s ease;
+  transition: opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .hero-stage--crt-zoom .hero-stage__crt-fx {
@@ -999,14 +1037,24 @@ html.rh-reduced-zoom .hero-stage--crt .hero-stage__screen {
     animation: none;
   }
   .desk-cover,
-  .hero-stage--crt .hero-stage__portal {
+  .hero-stage--crt .hero-stage__portal,
+  .hero-stage--crt .hero-stage__screen {
     transition: none;
   }
   .security-desk.is-zooming {
     animation: desk-fade-out 0.28s ease forwards;
   }
   .hero-stage--crt-zoom .hero-stage__portal {
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
     transform: none;
+  }
+  .hero-stage--crt-zoom .hero-stage__screen {
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 

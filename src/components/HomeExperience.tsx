@@ -10,33 +10,61 @@ const emptySubscribe = () => () => {};
 
 export default function HomeExperience() {
   const stored = useSyncExternalStore(emptySubscribe, hasEntered, () => false);
-  const [forcedOpen, setForcedOpen] = useState(false);
-  const open = stored || forcedOpen;
+  const [bootPhase, setBootPhase] = useState<"idle" | "zooming" | "done">(
+    "idle",
+  );
 
-  const onEnter = useCallback(() => setForcedOpen(true), []);
+  const live = stored || bootPhase === "done";
+  const phase = live ? "done" : bootPhase;
+  const inCrt = !live;
+
+  const onStartZoom = useCallback(() => setBootPhase("zooming"), []);
+  const onDone = useCallback(() => setBootPhase("done"), []);
 
   return (
     <>
-      {!open ? <BootSequence onEnter={onEnter} /> : null}
-      <section className={`hero-stage ${open ? "hero-stage--live" : "hero-stage--sealed"}`}>
-        <ShaderCanvas />
-        <div className="hero-copy">
-          <p className="kicker phosphor">Horror FX studio · Security node</p>
-          <GlitchWordmark />
-          <p className="tagline">Practical nightmares for camera.</p>
-          <p className="subline">Horror FX · Prosthetics · Creature · On-set bloodwork</p>
-          <div className="hero-ctas">
-            <Link href="/work" className="btn">
-              [ WORK ]
-            </Link>
-            <Link href="/contact" className="btn btn-blood">
-              [ CONTACT ]
-            </Link>
+      {inCrt ? (
+        <BootSequence
+          phase={phase}
+          onStartZoom={onStartZoom}
+          onDone={onDone}
+        />
+      ) : null}
+
+      <section
+        className={
+          live
+            ? "hero-stage hero-stage--live"
+            : phase === "zooming"
+              ? "hero-stage hero-stage--crt hero-stage--crt-zoom"
+              : "hero-stage hero-stage--crt"
+        }
+      >
+        <div className="hero-stage__portal">
+          <div className="hero-stage__screen">
+            <ShaderCanvas />
+            <div className="hero-copy">
+              <p className="kicker phosphor">Horror FX studio · Security node</p>
+              <GlitchWordmark />
+              <p className="tagline">Practical nightmares for camera.</p>
+              <p className="subline">
+                Horror FX · Prosthetics · Creature · On-set bloodwork
+              </p>
+              <div className="hero-ctas">
+                <Link href="/work" className="btn">
+                  [ WORK ]
+                </Link>
+                <Link href="/contact" className="btn btn-blood">
+                  [ CONTACT ]
+                </Link>
+              </div>
+            </div>
+            <div className="hero-meta">
+              <span>Pointer tracks · Shader live</span>
+              <span>Cam 00 · Archive interior</span>
+            </div>
           </div>
-        </div>
-        <div className="hero-meta">
-          <span>Pointer tracks · Shader live</span>
-          <span>Cam 00 · Archive interior</span>
+          {inCrt ? <div className="hero-stage__crt-fx" aria-hidden /> : null}
         </div>
       </section>
     </>

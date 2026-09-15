@@ -11,29 +11,119 @@ import {
 
 const STORAGE_KEY = "rh-entered";
 
-/** Center CRT screen hotspot in image space (security-desk.jpg is 16:9). */
-const CRT = {
-  left: 31.6,
-  top: 48.6,
-  width: 22.8,
-  height: 23.3,
+/**
+ * Center CRT glass rect in image % space for public/security-desk.png (v12, 16:9).
+ * Remeasured against the beige monitor phosphor area (inside black inner bezel).
+ */
+export const CRT = {
+  left: 28.4,
+  top: 55.3,
+  width: 14.3,
+  height: 19.1,
 } as const;
 
-const CRT_CENTER = {
+export const CRT_CENTER = {
   x: CRT.left + CRT.width / 2,
   y: CRT.top + CRT.height / 2,
 } as const;
 
-export default function BootSequence({ onEnter }: { onEnter: () => void }) {
+export const ZOOM_MS = 1600;
+export const REDUCED_MS = 280;
+
+export type BootPhase = "idle" | "zooming" | "done";
+
+export type CrtMetrics = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  fit: number;
+  zoom: number;
+};
+
+/** Map CRT % on the 16:9 cover plate into viewport pixels + zoom scales. */
+export function measureCrt(vw: number, vh: number): CrtMetrics {
+  const deskW = Math.max(vw, (vh * 16) / 9);
+  const deskH = Math.max(vh, (vw * 9) / 16);
+  const deskLeft = (vw - deskW) / 2;
+  const deskTop = (vh - deskH) / 2;
+
+  const left = deskLeft + (CRT.left / 100) * deskW;
+  const top = deskTop + (CRT.top / 100) * deskH;
+  const width = (CRT.width / 100) * deskW;
+  const height = (CRT.height / 100) * deskH;
+
+  const fit = Math.max(width / Math.max(vw, 1), height / Math.max(vh, 1));
+  const zoom = Math.max(vw / Math.max(width, 1), vh / Math.max(height, 1)) * 1.08;
+
+  return { left, top, width, height, fit, zoom };
+}
+
+function applyCrtVars(m: CrtMetrics) {
+  const root = document.documentElement;
+  root.style.setProperty("--crt-left", `${m.left}px`);
+  root.style.setProperty("--crt-top", `${m.top}px`);
+  root.style.setProperty("--crt-w", `${m.width}px`);
+  root.style.setProperty("--crt-h", `${m.height}px`);
+  root.style.setProperty("--crt-fit", String(m.fit));
+  root.style.setProperty("--crt-zoom", String(m.zoom));
+  root.style.setProperty("--crt-ox", `${CRT_CENTER.x}%`);
+  root.style.setProperty("--crt-oy", `${CRT_CENTER.y}%`);
+  root.classList.add("rh-crt-ready");
+}
+
+function clearCrtVars() {
+  const root = document.documentElement;
+  [
+    "--crt-left",
+    "--crt-top",
+    "--crt-w",
+    "--crt-h",
+    "--crt-fit",
+    "--crt-zoom",
+    "--crt-ox",
+    "--crt-oy",
+  ].forEach((k) => root.style.removeProperty(k));
+  root.classList.remove("rh-crt-ready", "rh-reduced-zoom");
+}
+
+export default function BootSequence({
+  phase,
+  onStartZoom,
+  onDone,
+}: {
+  phase: BootPhase;
+  onStartZoom: () => void;
+  onDone: () => void;
+}) {
   const reduce = useMemo(
     () =>
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     [],
   );
-  const [phase, setPhase] = useState<"idle" | "zooming" | "done">("idle");
   const [zoomStyle, setZoomStyle] = useState<CSSProperties>({});
   const finished = useRef(false);
+
+  const remeasure = useCallback(() => {
+    const m = measureCrt(window.innerWidth, window.innerHeight);
+    applyCrtVars(m);
+    return m;
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.add("rh-booting");
+    remeasure();
+    const onResize = () => {
+      if (phase === "idle") remeasure();
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      document.documentElement.classList.remove("rh-booting");
+      clearCrtVars();
+    };
+  }, [remeasure, phase]);
 
   const finish = useCallback(() => {
     if (finished.current) return;
@@ -43,27 +133,29 @@ export default function BootSequence({ onEnter }: { onEnter: () => void }) {
     } catch {
       /* ignore */
     }
-    setPhase("done");
-    onEnter();
-  }, [onEnter]);
+    document.documentElement.classList.remove("rh-booting");
+    clearCrtVars();
+    onDone();
+  }, [onDone]);
 
   const enter = useCallback(() => {
     if (phase !== "idle") return;
+    const m = remeasure();
     if (reduce) {
-      setPhase("zooming");
+      document.documentElement.classList.add("rh-reduced-zoom");
+      onStartZoom();
       return;
     }
-    const scale = Math.max(100 / CRT.width, 100 / CRT.height) * 1.12;
     setZoomStyle({
       transformOrigin: `${CRT_CENTER.x}% ${CRT_CENTER.y}%`,
-      ["--desk-scale" as string]: String(scale),
+      ["--desk-scale" as string]: String(m.zoom),
     });
-    setPhase("zooming");
-  }, [phase, reduce]);
+    onStartZoom();
+  }, [phase, reduce, remeasure, onStartZoom]);
 
   useEffect(() => {
     if (phase !== "zooming") return;
-    const ms = reduce ? 280 : 1450;
+    const ms = reduce ? REDUCED_MS : ZOOM_MS;
     const t = window.setTimeout(() => finish(), ms);
     return () => window.clearTimeout(t);
   }, [phase, finish, reduce]);
@@ -100,7 +192,7 @@ export default function BootSequence({ onEnter }: { onEnter: () => void }) {
           />
 
           <div
-            className="crt-screen-glow"
+            className="crt-glass-rim"
             style={{
               left: `${CRT.left}%`,
               top: `${CRT.top}%`,
@@ -109,27 +201,22 @@ export default function BootSequence({ onEnter }: { onEnter: () => void }) {
             }}
             aria-hidden
           />
-
-          <button
-            type="button"
-            className="crt-hotspot"
-            style={{
-              left: `${CRT.left}%`,
-              top: `${CRT.top}%`,
-              width: `${CRT.width}%`,
-              height: `${CRT.height}%`,
-            }}
-            onClick={enter}
-            disabled={phase !== "idle"}
-            aria-label="Enter archive"
-          >
-            <span className="crt-hotspot__label">
-              <span className="crt-hotspot__key">ENTER</span>
-              <span className="crt-hotspot__hint">click · ↵ · space</span>
-            </span>
-          </button>
         </div>
       </div>
+
+      {/* Fixed hotspot above the hero CRT portal so Enter stays clickable */}
+      <button
+        type="button"
+        className="crt-hotspot crt-hotspot--vp"
+        onClick={enter}
+        disabled={phase !== "idle"}
+        aria-label="Enter archive"
+      >
+        <span className="crt-hotspot__label">
+          <span className="crt-hotspot__key">ENTER</span>
+          <span className="crt-hotspot__hint">click · ↵ · space</span>
+        </span>
+      </button>
 
       <div className="desk-grain" aria-hidden />
 
